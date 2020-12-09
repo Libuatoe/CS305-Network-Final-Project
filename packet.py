@@ -53,6 +53,7 @@ class Packet:
         # Set the LEN property.
         self.LEN = len(bytes(self.payload))
 
+    # ! TODO: Maybe we should write a new checksum rather than the demonstration one in pdf.
     def calculate_CHECKSUM(self) -> int:
         checksum = 0
         for byte in self.payload_to_byte():
