@@ -1,4 +1,3 @@
-import byte_operation
 
 
 class Packet:
@@ -47,3 +46,32 @@ class Packet:
 
         print(type(tmp_dict[tmp_str]))
         return tmp_dict[tmp_str]
+
+    # ! TODO: write a decode function here. Receive a packet and decode it in Packet object.
+
+    def set_LEN(self) -> None:
+        # Set the LEN property.
+        self.LEN = len(bytes(self.payload))
+
+    def calculate_CHECKSUM(self) -> int:
+        checksum = 0
+        for byte in self.payload_to_byte():
+            checksum += byte
+        checksum = -(checksum % 256)
+        return checksum & 0XFF
+
+    def set_CHECKSUM(self) -> None:
+        self.CHECKSUM = self.calculate_CHECKSUM()
+
+
+def handshake_0() -> Packet:
+    """
+    :return: A Packet object that used for first handshake.
+    """
+    packet = Packet()
+    packet.SYN = 1
+    packet.SEQ = 0
+    packet.payload = ''
+    packet.set_LEN()
+    packet.set_CHECKSUM()
+    return packet
