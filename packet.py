@@ -1,5 +1,3 @@
-
-
 class Packet:
     # The constructor of Packet
     def __init__(self):
@@ -44,14 +42,14 @@ class Packet:
                     '100': b'\x70', '101': b'\x90', '110': b'\xC0', '111': b'\xE0'}
         tmp_str = str(self.SYN) + str(self.FIN) + str(self.ACK)
 
-        print(type(tmp_dict[tmp_str]))
+        # print(type(tmp_dict[tmp_str]))
         return tmp_dict[tmp_str]
 
     # ! TODO: write a decode function here. Receive a packet and decode it in Packet object.
 
     def set_LEN(self) -> None:
         # Set the LEN property.
-        self.LEN = len(bytes(self.payload))
+        self.LEN = len(bytes(self.payload, encoding="utf-8"))
 
     # ! TODO: Maybe we should write a new checksum rather than the demonstration one in pdf.
     def calculate_CHECKSUM(self) -> int:

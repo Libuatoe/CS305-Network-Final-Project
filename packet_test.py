@@ -6,6 +6,8 @@ if __name__ == '__main__':
     packet2.FIN = 1
     packet2.SYN = 1
 
-    print(packet2.encode())
+    # print(packet2.encode())
+
+    # print(packet2.test())
 
 

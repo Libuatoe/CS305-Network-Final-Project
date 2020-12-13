@@ -1,3 +1,5 @@
+import logging
+
 import packet
 from USocket import UnreliableSocket
 
@@ -31,7 +33,13 @@ class RDTSocket(UnreliableSocket):
         #                             END OF YOUR CODE                              #
         #############################################################################
 
-    def accept(self) -> (RDTSocket, (str, int)):
+    def bind(self, address: (str, int)):
+        super().bind(address=address)
+        self.local_address = address
+
+    def accept(self):
+        # def accept(self) -> (RDTSocket, (str, int)):
+
         """
         Accept a connection. The socket must be bound to an address and listening for 
         connections. The return value is a pair (conn, address) where conn is a new 
@@ -40,10 +48,14 @@ class RDTSocket(UnreliableSocket):
 
         This function should be blocking.
         """
-        conn, addr = RDTSocket(self._rate), None
         #############################################################################
         # TODO: YOUR CODE HERE                                                      #
         #############################################################################
+        conn, addr = self, None
+        print(self.local_address)
+        tmp = super().recvfrom(2048)
+        print("Server received the data, which is :")
+        print(tmp)
 
         #############################################################################
         #                             END OF YOUR CODE                              #
@@ -59,10 +71,13 @@ class RDTSocket(UnreliableSocket):
         # TODO: YOUR CODE HERE                                                      #
         #############################################################################
         # send syn, receive syn, ack; send ack
-        super().bind(address=address)
-        super().sendto(packet.handshake_0().encode())
+        # super().bind(address=address)
+        print(address)
+        self.sendto(packet.handshake_0().encode(), address)
 
-        raise NotImplementedError()
+        logging.debug("Send to server the handshake0 packet.")
+
+        # raise NotImplementedError()
         #############################################################################
         #                             END OF YOUR CODE                              #
         #############################################################################
@@ -78,11 +93,12 @@ class RDTSocket(UnreliableSocket):
         it MUST NOT affect the data returned by this function.
         """
         data = None
-        assert self._recv_from, "Connection not established yet. Use recvfrom instead."
+
+        # assert self._recv_from, "Connection not established yet. Use recvfrom instead."
         #############################################################################
         # TODO: YOUR CODE HERE                                                      #
         #############################################################################
-
+        data = super().recvfrom(bufsize)
         #############################################################################
         #                             END OF YOUR CODE                              #
         #############################################################################
