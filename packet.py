@@ -42,8 +42,6 @@ class Packet:
         tmp_str = str(self.SYN) + str(self.FIN) + str(self.ACK)
         return Packet.SYN_FIN_ACK_dict[tmp_str]
 
-    # ! TODO: write a decode function here. Receive a packet and decode it in Packet object.
-
     def set_LEN(self) -> None:
         # Set the LEN property.
         self.LEN = len(bytes(self.payload, encoding="utf-8"))
