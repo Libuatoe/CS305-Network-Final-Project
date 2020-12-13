@@ -1,7 +1,15 @@
 import logging
 
-import packet
 from USocket import UnreliableSocket
+from packet import *
+
+#########################################################
+#           日志模块，不需要动。 -- Cheng                    #
+#########################################################
+logging.basicConfig(
+    level=logging.DEBUG,  # 定义输出到文件的log级别，
+    format='%(asctime)s in %(filename)s: %(message)s',  # 定义输出log的格式
+    datefmt='%Y-%m-%d %A %H:%M:%S')  # 时间
 
 
 class RDTSocket(UnreliableSocket):
@@ -28,17 +36,15 @@ class RDTSocket(UnreliableSocket):
         #############################################################################
         # TODO: ADD YOUR NECESSARY ATTRIBUTES HERE
         #############################################################################
-        self.local_address = None
+        self.remote_address = None
         #############################################################################
         #                             END OF YOUR CODE                              #
         #############################################################################
 
     def bind(self, address: (str, int)):
         super().bind(address=address)
-        self.local_address = address
 
-    def accept(self):
-        # def accept(self) -> (RDTSocket, (str, int)):
+    def accept(self) -> ('RDTSocket', (str, int)):
 
         """
         Accept a connection. The socket must be bound to an address and listening for 
@@ -48,18 +54,18 @@ class RDTSocket(UnreliableSocket):
 
         This function should be blocking.
         """
-        #############################################################################
-        # TODO: YOUR CODE HERE                                                      #
-        #############################################################################
-        conn, addr = self, None
-        print(self.local_address)
-        tmp = super().recvfrom(2048)
-        print("Server received the data, which is :")
-        print(tmp)
+        handshake_0 = super().recvfrom(2048)
+        logging.debug("Server receives handshake 0")
+        addr = handshake_0[1]
+        if Packet.check_handshake(0, handshake_0[0]):
+            self.sendto(Packet.handshake(1).encode(), addr)
+            logging.debug("Server sends handshake 1")
 
-        #############################################################################
-        #                             END OF YOUR CODE                              #
-        #############################################################################
+        handshake_2 = super().recvfrom(2048)
+        if Packet.check_handshake(2, handshake_2[0]):
+            logging.debug("Server receives handshake 2")
+
+        conn = RDTSocket()
         return conn, addr
 
     def connect(self, address: (str, int)):
@@ -71,11 +77,15 @@ class RDTSocket(UnreliableSocket):
         # TODO: YOUR CODE HERE                                                      #
         #############################################################################
         # send syn, receive syn, ack; send ack
-        # super().bind(address=address)
-        print(address)
-        self.sendto(packet.handshake_0().encode(), address)
+        self.sendto(Packet.handshake(0).encode(), address)
+        logging.debug("Client sends handshake 0")
+        handshake_1 = super().recvfrom(2048)
+        while not Packet.check_handshake(1, handshake_1[0]):
+            handshake_1 = super().recvfrom(2048)
+        logging.debug("Client receives handshake 1")
 
-        logging.debug("Send to server the handshake0 packet.")
+        self.sendto(Packet.handshake(2).encode(), address)
+        logging.debug("Client sends handshake 2")
 
         # raise NotImplementedError()
         #############################################################################
