@@ -1,4 +1,5 @@
 import logging
+import threading
 
 from USocket import UnreliableSocket
 from packet import *
@@ -33,13 +34,12 @@ class RDTSocket(UnreliableSocket):
         self._send_to = None
         self._recv_from = None
         self.debug = debug
-        #############################################################################
         # TODO: ADD YOUR NECESSARY ATTRIBUTES HERE
-        #############################################################################
+
         self.remote_address = None
-        #############################################################################
-        #                             END OF YOUR CODE                              #
-        #############################################################################
+        self.last_time = None
+        self.timeout = 2
+        self.state = 'CLOSED'
 
     def bind(self, address: (str, int)):
         super().bind(address=address)
@@ -54,12 +54,34 @@ class RDTSocket(UnreliableSocket):
 
         This function should be blocking.
         """
+
+        temp_state = 'LISTEN'
+
+        if temp_state == 'LISTEN':
+            handshake_0 = super().recvfrom(2048)
+            if Packet.check_handshake(0, handshake_0[0]):
+                pass
+
+        # Listen SYN, that is handshake0
+        handshake_0 = super().recvfrom(2048)
+        logging.debug("Server receives handshake 0")
+        addr = handshake_0[1]
+        temp_state = 'SYN-RCVD'
+        if Packet.check_handshake(0, handshake_0[0]):
+            self.sendto(Packet.handshake(1).encode(), addr)
+            logging.debug("Server sends handshake 1")
+        else:
+            # TODO: cha cuo bao wen
+            pass
+
         handshake_0 = super().recvfrom(2048)
         logging.debug("Server receives handshake 0")
         addr = handshake_0[1]
         if Packet.check_handshake(0, handshake_0[0]):
             self.sendto(Packet.handshake(1).encode(), addr)
             logging.debug("Server sends handshake 1")
+
+        handshake_2 = self.receive_handshake(2, 3)
 
         handshake_2 = super().recvfrom(2048)
         if Packet.check_handshake(2, handshake_2[0]):
@@ -72,25 +94,44 @@ class RDTSocket(UnreliableSocket):
         """
         Connect to a remote socket at address.
         Corresponds to the process of establishing a connection on the client side.
+        send syn, receive syn, ack; send ack
         """
-        #############################################################################
-        # TODO: YOUR CODE HERE                                                      #
-        #############################################################################
-        # send syn, receive syn, ack; send ack
+
+        # send syn
         self.sendto(Packet.handshake(0).encode(), address)
-        logging.debug("Client sends handshake 0")
-        handshake_1 = super().recvfrom(2048)
-        while not Packet.check_handshake(1, handshake_1[0]):
-            handshake_1 = super().recvfrom(2048)
-        logging.debug("Client receives handshake 1")
+        logging.debug("Client sent handshake 0")
+
+        handshake_1 = self.receive_handshake(1, 3)
+        while handshake_1[1] != address:
+            handshake_1 = self.receive_handshake(1, 3)
+        logging.debug("Client received handshake 1")
 
         self.sendto(Packet.handshake(2).encode(), address)
-        logging.debug("Client sends handshake 2")
+        logging.debug("Client sent handshake 2")
 
         # raise NotImplementedError()
-        #############################################################################
-        #                             END OF YOUR CODE                              #
-        #############################################################################
+
+    def receive_handshake(self, number: int, max_retry: int) -> bytes:
+        tmp_timeout = self.timeout
+        i = 0
+        while True:
+            logging.debug(
+                "Trying to receive handshake " + str(number) + " , " + str(i + 1) + (" time." if i == 0 else " times."))
+            expire_thread = TimerThread(func=self.recvfrom_USocket, args=(2048,))
+            expire_thread.start()
+            expire_thread.join(timeout=tmp_timeout)
+            handshake = expire_thread.get_result()
+            i = i + 1
+            tmp_timeout *= 2
+            if i == max_retry:
+                raise ConnectionError
+            if handshake is not None and Packet.check_handshake(number, handshake[0]):
+                break
+
+        return handshake
+
+    def recvfrom_USocket(self, buff_size: int) -> tuple:
+        return super().recvfrom(buff_size)
 
     def recv(self, bufsize: int) -> bytes:
         """
@@ -153,3 +194,18 @@ class RDTSocket(UnreliableSocket):
 You can define additional functions and classes to do thing such as packing/unpacking packets, or threading.
 
 """
+
+
+class TimerThread(threading.Thread):
+
+    def __init__(self, func, args=()):
+        super(TimerThread, self).__init__()
+        self.func = func
+        self.args = args
+        self.result = None
+
+    def run(self):
+        self.result = self.func(*self.args)
+
+    def get_result(self):
+        return self.result  # 如果子线程不使用join方法，此处可能会报没有self.result的错误

@@ -1,14 +1,19 @@
 class Packet:
-    SYN_FIN_ACK_dict = {'000': b'\x00', '001': b'\x20', '010': b'\x40', '011': b'\x60',
-                        '100': b'\x70', '101': b'\x90', '110': b'\xC0', '111': b'\xE0'}
+    SYN_FIN_ACK_RST_dict = {
+        '0000': b'\x00', '0010': b'\x20', '0100': b'\x40', '0110': b'\x60',
+        '1000': b'\x70', '1010': b'\x90', '1100': b'\xC0', '1110': b'\xE0',
+        '0001': b'\x10', '0011': b'\x30', '0101': b'\x50', '0111': b'\x70',
+        '1001': b'\x80', '1011': b'\xA0', '1101': b'\xD0', '1111': b'\xF0'
+    }
 
     def __init__(self):
         # merge SYN FIN ACK to a byte
-        # SYN FIN ACK 0 0 0 0 0
+        # SYN FIN ACK RST 0 0 0 0
         # total 8 bits, that is 1 bytes
         self.SYN = 0
         self.FIN = 0
         self.ACK = 0
+        self.RST = 0
 
         # max SEQ is 2^32 = 4,294,967,295
         # 4 bytes
@@ -40,7 +45,7 @@ class Packet:
         :return: A bytes.
         """
         tmp_str = str(self.SYN) + str(self.FIN) + str(self.ACK)
-        return Packet.SYN_FIN_ACK_dict[tmp_str]
+        return Packet.SYN_FIN_ACK_RST_dict[tmp_str]
 
     def set_LEN(self) -> None:
         # Set the LEN property.
@@ -90,13 +95,20 @@ class Packet:
         return packet
 
     @staticmethod
+    def RST_packet() -> 'Packet':
+        packet = Packet()
+        packet.RST = 1
+        packet.set_payload('')
+        return packet
+
+    @staticmethod
     def parse(raw: bytes) -> 'Packet':
         """
         This function parse the bytes of Packet object.
         :param raw: The bytes.
         :return: A Packet Object.
         """
-        new_dict = {v: k for k, v in Packet.SYN_FIN_ACK_dict.items()}
+        new_dict = {v: k for k, v in Packet.SYN_FIN_ACK_RST_dict.items()}
         packet = Packet()
         tmp_str = new_dict[raw[:1]]
         packet.SYN = tmp_str[0]
@@ -110,16 +122,17 @@ class Packet:
         return packet
 
     def to_string(self):
-        str0 = 'SYN: ' + str(self.SYN) + '\n'
-        str1 = 'FIN: ' + str(self.FIN) + '\n'
-        str2 = 'ACK: ' + str(self.ACK) + '\n'
-        str3 = 'SEQ: ' + str(self.SEQ) + '\n'
-        str4 = 'SEQACK: ' + str(self.SEQACK) + '\n'
-        str5 = 'LEN: ' + str(self.LEN) + '\n'
-        str6 = 'CHECKSUM: ' + str(self.CHECKSUM) + '\n'
-        str7 = 'payload: ' + str(self.payload) + '\n'
+        string = 'SYN: ' + str(self.SYN) + '\n' \
+                 + 'FIN: ' + str(self.FIN) + '\n' \
+                 + 'ACK: ' + str(self.ACK) + '\n' \
+                 + 'RST: ' + str(self.RST) + '\n' \
+                 + 'SEQ: ' + str(self.SEQ) + '\n' \
+                 + 'SEQACK: ' + str(self.SEQACK) + '\n' \
+                 + 'LEN: ' + str(self.LEN) + '\n' \
+                 + 'CHECKSUM: ' + str(self.CHECKSUM) + '\n' \
+                 + 'payload: ' + str(self.payload) + '\n'
 
-        print(str0 + str1 + str2 + str3 + str4 + str5 + str6 + str7)
+        print(string)
 
     @staticmethod
     def check_handshake(number: int, raw: bytes) -> bool:
