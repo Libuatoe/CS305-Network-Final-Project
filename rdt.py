@@ -56,36 +56,36 @@ class RDTSocket(UnreliableSocket):
         """
 
         temp_state = 'LISTEN'
+        addr = None
 
-        if temp_state == 'LISTEN':
-            handshake_0 = super().recvfrom(2048)
-            if Packet.check_handshake(0, handshake_0[0]):
-                pass
-
-        # Listen SYN, that is handshake0
-        handshake_0 = super().recvfrom(2048)
-        logging.debug("Server receives handshake 0")
-        addr = handshake_0[1]
-        temp_state = 'SYN-RCVD'
-        if Packet.check_handshake(0, handshake_0[0]):
-            self.sendto(Packet.handshake(1).encode(), addr)
-            logging.debug("Server sends handshake 1")
-        else:
-            # TODO: cha cuo bao wen
-            pass
-
-        handshake_0 = super().recvfrom(2048)
-        logging.debug("Server receives handshake 0")
-        addr = handshake_0[1]
-        if Packet.check_handshake(0, handshake_0[0]):
-            self.sendto(Packet.handshake(1).encode(), addr)
-            logging.debug("Server sends handshake 1")
-
-        handshake_2 = self.receive_handshake(2, 3)
-
-        handshake_2 = super().recvfrom(2048)
-        if Packet.check_handshake(2, handshake_2[0]):
-            logging.debug("Server receives handshake 2")
+        while True:
+            if temp_state == 'LISTEN':
+                handshake_0 = super().recvfrom(2048)
+                addr = handshake_0[1]
+                if Packet.check_handshake(0, handshake_0[0]):
+                    self.sendto(Packet.handshake(1).encode(), addr)
+                    logging.debug("Server receives handshake 0")
+                    logging.debug("Server sends handshake 1")
+                    temp_state = 'SYN-SENT'
+                else:
+                    temp_state = 'CLOSED'
+            if temp_state == 'SYN-SENT':
+                expire_thread = TimerThread(func=self.recvfrom_USocket, args=(2048,))
+                expire_thread.start()
+                expire_thread.join(timeout=3)
+                handshake1 = expire_thread.get_result()
+                addr = handshake1[1]
+                if Packet.check_handshake(1, handshake1[0]):
+                    self.sendto(Packet.handshake(2).encode(), addr)
+                    logging.debug("Server receives handshake 2")
+                    temp_state = 'ESTABLISHED'
+                else:
+                    temp_state = 'CLOSED'
+            if temp_state == 'ESTABLISHED':
+                logging.debug("Server connection established.")
+                break
+            if temp_state == 'CLOSED':
+                temp_state = 'LISTEN'
 
         conn = RDTSocket()
         return conn, addr
